@@ -17,11 +17,11 @@ AFRICA_COUNTRY_CODES = [
 ]
 
 MEDICAL_SCHOOL_SEARCH_TERMS = [
-    "medical school",
-    "school of medicine",
-    "faculty of medicine",
-    "college of medicine",
-    "university of health sciences",
+    "medical",
+    "medicine",
+    "health sciences",
+    "pharmacy",
+    "nursing",
 ]
 
 SAMPLE_RESULTS = [
@@ -78,7 +78,7 @@ def _normalise_institution(item: Dict[str, Any], source_query: str) -> Dict[str,
 
 
 class OpenAlexClient:
-    def __init__(self, mailto: Optional[str] = None, timeout: int = 30) -> None:
+    def __init__(self, mailto: Optional[str] = None, timeout: int = 60) -> None:
         self.mailto = mailto or os.getenv("OPENALEX_MAILTO")
         self.timeout = timeout
         self.session = requests.Session()
@@ -100,21 +100,22 @@ class OpenAlexClient:
         if sample:
             return SAMPLE_RESULTS[:max_results]
 
-        countries = list(country_codes or AFRICA_COUNTRY_CODES)
-        filter_value = f"type:education,country_code:{'|'.join(countries)}"
         seen: set[str] = set()
         results: List[Dict[str, Any]] = []
 
         for term in MEDICAL_SCHOOL_SEARCH_TERMS:
+            if country_codes:
+                codes = list(country_codes)
+                filter_value = f"country_code:{'|'.join(codes)},display_name.search:{term}"
+            else:
+                filter_value = f"continent:africa,display_name.search:{term}"
+
             cursor = "*"
             while cursor and len(results) < max_results:
                 payload = self._get_institutions(term, filter_value, per_page, cursor)
                 for item in payload.get("results", []):
                     institution_id = item.get("id")
-                    name = item.get("display_name") or ""
                     if not institution_id or institution_id in seen:
-                        continue
-                    if not _is_medical_school_like(name):
                         continue
                     seen.add(institution_id)
                     results.append(_normalise_institution(item, term))
@@ -129,7 +130,6 @@ class OpenAlexClient:
 
     def _get_institutions(self, search_term: str, filter_value: str, per_page: int, cursor: str) -> Dict[str, Any]:
         params: Dict[str, Any] = {
-            "search": search_term,
             "filter": filter_value,
             "per-page": per_page,
             "cursor": cursor,
