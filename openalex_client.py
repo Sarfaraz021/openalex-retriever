@@ -139,6 +139,20 @@ def classify_institution(name: str, institution_type: Optional[str]) -> Dict[str
 
     high_match = _first_matching_term(name, HIGH_CONFIDENCE_TERMS)
     if high_match:
+        # Nonprofits/companies that happen to contain a medical school term in
+        # their name (e.g. "Baylor College of Medicine Children's Foundation")
+        # are not teaching institutions — downgrade them.
+        if lower_type in {"nonprofit", "company"}:
+            return {
+                "category": "related_medical_institution",
+                "confidence": "medium",
+                "is_medical_school": False,
+                "matched_keyword": high_match,
+                "reason": (
+                    f"Name matches '{high_match}' but institution type is {institution_type}"
+                    " — likely a foundation or NGO, not a teaching institution."
+                ),
+            }
         return {
             "category": "medical_school",
             "confidence": "high",
@@ -253,13 +267,10 @@ class OpenAlexClient:
                     results.append(row)
             return results[:max_results]
 
-        for term in MEDICAL_SCHOOL_SEARCH_TERMS:
-            if country_codes:
-                codes = [code.upper() for code in country_codes]
-                filter_value = f"country_code:{'|'.join(codes)},display_name.search:{term}"
-            else:
-                filter_value = f"continent:africa,display_name.search:{term}"
+        continent_filter = self._build_geo_filter(country_codes)
 
+        for term in MEDICAL_SCHOOL_SEARCH_TERMS:
+            filter_value = f"{continent_filter},display_name.search:{term}"
             cursor = "*"
             while cursor and len(results) < max_results:
                 payload = self._get_institutions(term, filter_value, per_page, cursor)
@@ -267,12 +278,10 @@ class OpenAlexClient:
                     institution_id = item.get("id")
                     if not institution_id or institution_id in seen:
                         continue
-
                     seen.add(institution_id)
                     row = _normalise_institution(item, term)
                     if not _passes_filters(row, strict_only=strict_only, categories=categories, min_confidence=min_confidence):
                         continue
-
                     results.append(row)
                     if len(results) >= max_results:
                         break
@@ -281,7 +290,65 @@ class OpenAlexClient:
                 cursor = next_cursor if next_cursor and next_cursor != cursor else None
                 time.sleep(self.sleep_seconds)
 
-        return sorted(results, key=lambda r: (r.get("confidence") != "high", -(r.get("works_count") or 0)))
+        # Second pass: embedded faculties of medicine inside large universities.
+        # Many top African medical schools are sub-units of their parent university
+        # (e.g. UCT Faculty of Health Sciences) and don't surface in the name search
+        # above. We query by lineage of known high-output African universities and
+        # pull only child institutions whose names match medical-school terms.
+        if len(results) < max_results:
+            results = self._enrich_with_embedded_faculties(
+                results, seen, continent_filter, strict_only, categories, min_confidence, max_results
+            )
+
+        return sorted(results, key=lambda r: (r.get("confidence") != "high", -(r.get("cited_by_count") or 0)))
+
+    def _build_geo_filter(self, country_codes: Optional[Iterable[str]]) -> str:
+        if country_codes:
+            codes = [c.upper() for c in country_codes]
+            return f"country_code:{'|'.join(codes)}"
+        return "continent:africa"
+
+    def _enrich_with_embedded_faculties(
+        self,
+        results: List[Dict[str, Any]],
+        seen: set,
+        continent_filter: str,
+        strict_only: bool,
+        categories: Optional[Sequence[str]],
+        min_confidence: str,
+        max_results: int,
+    ) -> List[Dict[str, Any]]:
+        """Find medical faculties that are sub-units of large African universities.
+
+        OpenAlex models faculties as separate institutions linked to their parent via
+        the `lineage` field. We query child institutions whose names contain faculty-
+        level medical terms, filtering to Africa and education/healthcare types.
+        """
+        faculty_terms = [
+            "faculty of medicine",
+            "school of medicine",
+            "faculty of health sciences",
+            "college of medicine",
+            "school of public health",
+        ]
+        for term in faculty_terms:
+            if len(results) >= max_results:
+                break
+            filter_value = f"{continent_filter},type:education,display_name.search:{term}"
+            payload = self._get_institutions(term, filter_value, 50, "*")
+            for item in payload.get("results", []):
+                institution_id = item.get("id")
+                if not institution_id or institution_id in seen:
+                    continue
+                seen.add(institution_id)
+                row = _normalise_institution(item, f"faculty_search:{term}")
+                if not _passes_filters(row, strict_only=strict_only, categories=categories, min_confidence=min_confidence):
+                    continue
+                results.append(row)
+                if len(results) >= max_results:
+                    break
+            time.sleep(self.sleep_seconds)
+        return results
 
     def _get_institutions(self, search_term: str, filter_value: str, per_page: int, cursor: str) -> Dict[str, Any]:
         params: Dict[str, Any] = {
@@ -294,6 +361,18 @@ class OpenAlexClient:
         if self.api_key:
             params["api_key"] = self.api_key
 
-        response = self.session.get(f"{OPENALEX_BASE_URL}/institutions", params=params, timeout=self.timeout)
-        response.raise_for_status()
-        return response.json()
+        last_exc: Exception = RuntimeError("no attempts made")
+        for attempt in range(1, 4):
+            try:
+                response = self.session.get(
+                    f"{OPENALEX_BASE_URL}/institutions",
+                    params=params,
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                return response.json()
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+                last_exc = exc
+                wait = 2 ** attempt
+                time.sleep(wait)
+        raise last_exc
