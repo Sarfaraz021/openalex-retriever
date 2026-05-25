@@ -1,17 +1,28 @@
-# OpenAlex Scrapper
+# OpenAlex Retriever
 
-Small Python service/CLI to retrieve medical-school-like institutions in Africa using the OpenAlex Institutions API.
+A Python CLI and FastAPI service for retrieving and classifying medical-school-like institutions in Africa using the official OpenAlex Institutions API.
 
-## Why this approach
+This is **API-based data retrieval**, not HTML scraping.
 
-OpenAlex institutions are universities and other organizations that authors use as affiliations.
+## Why classification is needed
 
-OpenAlex supports filters such as `country_code`, `continent`, and `type`, but it does not have a dedicated `medical_school` institution type. This project therefore retrieves institution records using:
+OpenAlex does not expose a dedicated `medical_school` institution type. A broad search for terms like `medical`, `medicine`, or `health sciences` returns useful but mixed results, including:
 
-- African country codes
-- `type:education`
-- medical search terms like `medical school`, `school of medicine`, `faculty of medicine`, `college of medicine`, and `health sciences`
-- a final local name filter to reduce unrelated institutions
+- medical universities and colleges
+- faculties/schools of medicine
+- health sciences universities
+- research institutes
+- hospitals and medical centres
+- councils, associations, NGOs, and publishers
+
+This project improves precision by classifying every result into:
+
+- `medical_school` — high-confidence school/university/college/faculty match
+- `medical_school_candidate` — medium-confidence teaching institution candidate
+- `related_medical_institution` — relevant medical institution, but not a school
+- `unknown_or_related` — weak or unclear match
+
+Each row includes `category`, `confidence`, `is_medical_school`, `matched_keyword`, and a human-readable `reason`.
 
 ## Setup
 
@@ -19,6 +30,19 @@ OpenAlex supports filters such as `country_code`, `continent`, and `type`, but i
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+Optional environment variables:
+
+```bash
+export OPENALEX_MAILTO=your_email@example.com
+export OPENALEX_API_KEY=your_openalex_api_key
+```
+
+## Run tests
+
+```bash
+pytest -q
 ```
 
 ## Run as an API
@@ -33,40 +57,96 @@ Health check:
 curl http://127.0.0.1:8000/health
 ```
 
-Test without internet using bundled sample data:
+Strict medical-school candidates only, using offline sample data:
 
 ```bash
-curl 'http://127.0.0.1:8000/medical-schools/africa?sample=true&max_results=5' | python -m json.tool
+curl 'http://127.0.0.1:8000/medical-schools/africa?sample=true&strict_only=true&min_confidence=medium' | python -m json.tool
 ```
 
-Real OpenAlex test:
+Broad mode, including related institutions:
 
 ```bash
-curl 'http://127.0.0.1:8000/medical-schools/africa?max_results=25&per_page=50&mailto=YOUR_EMAIL@example.com' | python -m json.tool
+curl 'http://127.0.0.1:8000/medical-schools/africa?sample=true&strict_only=false&min_confidence=low' | python -m json.tool
+```
+
+Live OpenAlex strict test:
+
+```bash
+curl 'http://127.0.0.1:8000/medical-schools/africa?max_results=50&per_page=50&strict_only=true&min_confidence=medium&mailto=YOUR_EMAIL@example.com' | python -m json.tool
+```
+
+Filter to one country:
+
+```bash
+curl 'http://127.0.0.1:8000/medical-schools/africa?country_code=NG&strict_only=true&max_results=25&mailto=YOUR_EMAIL@example.com' | python -m json.tool
+```
+
+Filter to high-confidence only:
+
+```bash
+curl 'http://127.0.0.1:8000/medical-schools/africa?strict_only=true&min_confidence=high&max_results=25&mailto=YOUR_EMAIL@example.com' | python -m json.tool
 ```
 
 ## Run as a CLI
 
-Offline sample:
+Strict JSON output:
 
 ```bash
-python cli.py --sample --max-results 5
+python cli.py --max-results 50 --per-page 50 --mailto YOUR_EMAIL@example.com
 ```
 
-Real OpenAlex call:
+CSV export:
 
 ```bash
-python cli.py --max-results 25 --per-page 50 --mailto YOUR_EMAIL@example.com
+python cli.py --max-results 100 --format csv --output african_medical_schools.csv --mailto YOUR_EMAIL@example.com
 ```
 
-## Direct OpenAlex curl for debugging
+Country-specific CSV export:
 
 ```bash
-curl 'https://api.openalex.org/institutions?search=medical%20school&filter=type:education,country_code:DZ%7CAO%7CBJ%7CBW%7CBF%7CBI%7CCV%7CCM%7CCF%7CTD%7CKM%7CCD%7CCG%7CCI%7CDJ%7CEG%7CGQ%7CER%7CSZ%7CET%7CGA%7CGM%7CGH%7CGN%7CGW%7CKE%7CLS%7CLR%7CLY%7CMG%7CMW%7CML%7CMR%7CMU%7CMA%7CMZ%7CNA%7CNE%7CNG%7CRW%7CST%7CSN%7CSC%7CSL%7CSO%7CZA%7CSS%7CSD%7CTZ%7CTG%7CTN%7CUG%7CZM%7CZW&per-page=5' | python -m json.tool
+python cli.py --country-code NG --country-code ZA --max-results 100 --format csv --output ng_za_medical_schools.csv --mailto YOUR_EMAIL@example.com
 ```
 
-## Notes
+Broad discovery mode:
 
-- For production use, add caching because OpenAlex responses can be large.
-- Add your email via `mailto` or `OPENALEX_MAILTO` to use the OpenAlex polite pool.
-- This is a first-pass retriever, not a verified canonical directory of all African medical schools.
+```bash
+python cli.py --no-strict-only --min-confidence low --max-results 100 --output broad_medical_institutions.json --mailto YOUR_EMAIL@example.com
+```
+
+Offline sample mode:
+
+```bash
+python cli.py --sample --no-save
+```
+
+## Output fields
+
+Each result includes:
+
+```text
+openalex_id
+display_name
+country_code
+type
+homepage_url
+works_count
+cited_by_count
+ror
+source_query
+category
+confidence
+is_medical_school
+matched_keyword
+reason
+```
+
+## Recommended workflow for Peter's task
+
+1. Start with strict mode to retrieve likely medical schools.
+2. Export CSV for review.
+3. Run broad mode separately to inspect related hospitals/research institutes/councils without mixing them into the school list.
+4. Manually verify edge cases because OpenAlex does not provide a canonical `medical_school` entity type.
+
+## Limitations
+
+This project produces a high-quality candidate list, not a guaranteed official directory of every medical school in Africa. Accuracy depends on OpenAlex institution naming, ROR metadata, and search coverage.
