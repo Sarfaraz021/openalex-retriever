@@ -15,14 +15,14 @@ The audit supports a cautious conclusion: OpenAlex has strong bibliographic and 
 | OpenAlex architecture and institution model | High confidence: OpenAlex Institutions represent affiliation organizations, not only schools/universities. |
 | Dedicated `medical_school` type | Confirmed absent in this audit approach; no dedicated `medical_school` institution type was available. |
 | Embedded faculty limitation | High confidence, but not absolute: many faculties/schools appear embedded under broader universities, while some are standalone records. |
-| African institution count | Run-specific API count: 4022 returned by `filter=continent:africa` at the time of this run. This should be treated as dynamic, not a permanent total. |
+| African institution count | Run-specific API count: 4,022 returned by `filter=continent:africa` at the time of this run. This should be treated as dynamic, not a permanent total. |
 | Specific author counts | Run-specific counts from the Authors endpoint at the time of this run. They may change as OpenAlex updates. |
 | ROR coverage | Not universal. Many institutions have ROR IDs, but not all OpenAlex institution records should be assumed to have one. |
 | Two-layer strategy | Sound methodology for retrieval auditing, but still requires manual validation for final ground truth. |
 
 ## 1. African institution coverage by country and type
 
-At the time of this run, `filter=continent:africa` returned **4022** OpenAlex institution records. This is a live API-derived count and should be treated as a snapshot, not a fixed coverage guarantee.
+At the time of this run, `filter=continent:africa` returned **4,022** OpenAlex institution records. This is a live API-derived count and should be treated as a snapshot, not a fixed coverage guarantee.
 
 The table below shows only the top 10 countries for readability. The full country-level coverage is available in `outputs/coverage_by_country.csv` and `outputs/coverage_by_country_type.json`. A full country-by-type matrix is also available in `outputs/coverage_country_type_matrix.csv`, so countries outside the top 10 are still included in the audit evidence.
 
@@ -45,7 +45,7 @@ Institution coverage by type:
 
 | Type | Count |
 |---|---:|
-| education | 1615 |
+| education | 1,615 |
 | nonprofit | 625 |
 | government | 533 |
 | healthcare | 404 |
@@ -57,18 +57,18 @@ Institution coverage by type:
 
 ## 2. Why strict keyword filtering returns a small list
 
-- OpenAlex has no dedicated medical_school institution type.
+- OpenAlex has no dedicated `medical_school` institution type.
 - Many faculties/schools are embedded inside broader university records rather than standalone institutions.
-- Strict rules require strong terms like medical university, college of medicine, school of medicine, or faculty of medicine.
-- Broad terms like medical/health/nursing increase recall but introduce hospitals, NGOs, research institutes, councils, and associations.
+- Strict rules require strong terms like `medical university`, `college of medicine`, `school of medicine`, or `faculty of medicine`.
+- Broad terms like `medical`, `health`, `nursing`, and `pharmacy` increase recall but introduce hospitals, NGOs, research institutes, councils, and associations.
 
 Strategy comparison from this run:
 
-| Strategy | Count | Category counts | Confidence counts |
+| Strategy | Count | Category summary | Confidence summary |
 |---|---:|---|---|
-| strict_high_confidence_only | 13 | {'medical_school': 13} | {'high': 13} |
-| balanced_strict_medium_plus | 24 | {'medical_school': 13, 'medical_school_candidate': 11} | {'high': 13, 'medium': 11} |
-| broad_discovery_low_plus | 92 | {'medical_school': 13, 'related_medical_institution': 55, 'unknown_or_related': 13, 'medical_school_candidate': 11} | {'high': 13, 'low': 67, 'medium': 12} |
+| `strict_high_confidence_only` | 13 | 13 medical schools | 13 high |
+| `balanced_strict_medium_plus` | 24 | 13 medical schools; 11 medical-school candidates | 13 high; 11 medium |
+| `broad_discovery_low_plus` | 92 | 13 medical schools; 11 candidates; 55 related medical institutions; 13 unknown/related | 13 high; 12 medium; 67 low |
 
 Interpretation: strict keyword filtering returns a smaller but more defensible list. Broad retrieval should be used for discovery and audit comparison, not as the final medical-school list.
 
@@ -76,9 +76,9 @@ Interpretation: strict keyword filtering returns a smaller but more defensible l
 
 Recommended retrieval strategy:
 
-1. Use strict_high_confidence_only for a defensible core list.
-2. Use balanced_strict_medium_plus for a practical review list.
-3. Use broad_discovery_low_plus as a candidate discovery layer, not as the final list.
+1. Use `strict_high_confidence_only` for a defensible core list.
+2. Use `balanced_strict_medium_plus` for a practical review list.
+3. Use `broad_discovery_low_plus` as a candidate discovery layer, not as the final list.
 4. For embedded faculties, combine institution search with works/authors affiliation queries against parent universities.
 
 Embedded probe used:
@@ -135,10 +135,23 @@ The Authors endpoint provides useful bibliographic author metadata linked to ins
 
 - OpenAlex ID: https://openalex.org/I2802393258
 - Institution type: education
-- Authors matched by `last_known_institutions.id` at time of run: 2094
+- Authors matched by `last_known_institutions.id` at time of run: 2,094
 - Provides: disambiguated author profiles, ORCID when available, works/citations, last known institutions, affiliation history where available, topics, and works API URL.
 - Does not provide: official staff directory, employment verification, guaranteed department/faculty membership, or perfectly complete historical affiliations.
 
+## Supporting output files
+
+Recommended files to review with this report:
+
+- `outputs/coverage_by_country.csv` — full African country/territory coverage.
+- `outputs/coverage_country_type_matrix.csv` — country-by-institution-type breakdown.
+- `outputs/query_strategy_comparison.json` — strict vs balanced vs broad retrieval evidence.
+- `outputs/authors_endpoint_sample_audit.json` — Authors endpoint evidence for the three sample institutions.
+
+Optional deeper audit files:
+
+- `outputs/false_positive_negative_audit.json`
+- `outputs/embedded_faculty_strategy_audit.json`
 
 ## Bottom line
 
