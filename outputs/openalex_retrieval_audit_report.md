@@ -24,6 +24,8 @@ The audit supports a cautious conclusion: OpenAlex has strong bibliographic and 
 
 At the time of this run, `filter=continent:africa` returned **4,022** OpenAlex institution records. This is a live API-derived count and should be treated as a snapshot, not a fixed coverage guarantee.
 
+The table below shows only the top 10 countries for readability. The full country-level coverage is available in `outputs/coverage_by_country.csv` and `outputs/coverage_by_country_type.json`. A full country-by-type matrix is also available in `outputs/coverage_country_type_matrix.csv`, so countries outside the top 10 are still included in the audit evidence.
+
 Top countries by institution count:
 
 | Country entity | Country | Count |
