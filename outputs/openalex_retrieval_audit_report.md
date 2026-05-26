@@ -141,17 +141,16 @@ The Authors endpoint provides useful bibliographic author metadata linked to ins
 
 ## Supporting output files
 
-Recommended files to review with this report:
+Further supporting files are available here: https://drive.google.com/drive/folders/1SraPdQDIfrXeqpOxf-rMIolFyJ0JmyQU?usp=sharing
 
+The Drive folder includes:
+
+- `outputs/openalex_retrieval_audit_report.md` — this audit report.
 - `outputs/coverage_by_country.csv` — full African country/territory coverage.
 - `outputs/coverage_country_type_matrix.csv` — country-by-institution-type breakdown.
 - `outputs/query_strategy_comparison.json` — strict vs balanced vs broad retrieval evidence.
-- `outputs/authors_endpoint_sample_audit.json` — Authors endpoint evidence for the three sample institutions.
 
-Optional deeper audit files:
-
-- `outputs/false_positive_negative_audit.json`
-- `outputs/embedded_faculty_strategy_audit.json`
+Optional deeper audit files can be generated separately if needed, including false-positive/false-negative examples and embedded-faculty probe outputs.
 
 ## Bottom line
 
