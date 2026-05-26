@@ -1,6 +1,6 @@
 # OpenAlex Retrieval Audit — African Medical Schools
 
-Generated at: 2026-05-26T21:04:22.666103+00:00
+Generated at: 2026-05-26
 
 ## Executive summary
 
@@ -145,12 +145,11 @@ Further supporting files are available here: https://drive.google.com/drive/fold
 
 The Drive folder includes:
 
-- `outputs/openalex_retrieval_audit_report.md` — this audit report.
 - `outputs/coverage_by_country.csv` — full African country/territory coverage.
 - `outputs/coverage_country_type_matrix.csv` — country-by-institution-type breakdown.
 - `outputs/query_strategy_comparison.json` — strict vs balanced vs broad retrieval evidence.
 
-Optional deeper audit files can be generated separately if needed, including false-positive/false-negative examples and embedded-faculty probe outputs.
+If you want deeper audit files can be generated separately if needed, including false-positive/false-negative examples and embedded-faculty probe outputs.
 
 ## Bottom line
 
