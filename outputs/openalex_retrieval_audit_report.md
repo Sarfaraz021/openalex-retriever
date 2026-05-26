@@ -1,6 +1,6 @@
 # OpenAlex Retrieval Audit — African Medical Schools
 
-Generated at: 2026-05-26T20:37:11.761761+00:00
+Generated at: 2026-05-26T21:04:22.666103+00:00
 
 ## Executive summary
 
@@ -15,14 +15,14 @@ The audit supports a cautious conclusion: OpenAlex has strong bibliographic and 
 | OpenAlex architecture and institution model | High confidence: OpenAlex Institutions represent affiliation organizations, not only schools/universities. |
 | Dedicated `medical_school` type | Confirmed absent in this audit approach; no dedicated `medical_school` institution type was available. |
 | Embedded faculty limitation | High confidence, but not absolute: many faculties/schools appear embedded under broader universities, while some are standalone records. |
-| African institution count | Run-specific API count: 4,022 returned by `filter=continent:africa` at the time of this run. This should be treated as dynamic, not a permanent total. |
+| African institution count | Run-specific API count: 4022 returned by `filter=continent:africa` at the time of this run. This should be treated as dynamic, not a permanent total. |
 | Specific author counts | Run-specific counts from the Authors endpoint at the time of this run. They may change as OpenAlex updates. |
 | ROR coverage | Not universal. Many institutions have ROR IDs, but not all OpenAlex institution records should be assumed to have one. |
 | Two-layer strategy | Sound methodology for retrieval auditing, but still requires manual validation for final ground truth. |
 
 ## 1. African institution coverage by country and type
 
-At the time of this run, `filter=continent:africa` returned **4,022** OpenAlex institution records. This is a live API-derived count and should be treated as a snapshot, not a fixed coverage guarantee.
+At the time of this run, `filter=continent:africa` returned **4022** OpenAlex institution records. This is a live API-derived count and should be treated as a snapshot, not a fixed coverage guarantee.
 
 The table below shows only the top 10 countries for readability. The full country-level coverage is available in `outputs/coverage_by_country.csv` and `outputs/coverage_by_country_type.json`. A full country-by-type matrix is also available in `outputs/coverage_country_type_matrix.csv`, so countries outside the top 10 are still included in the audit evidence.
 
@@ -55,14 +55,12 @@ Institution coverage by type:
 | archive | 53 |
 | funder | 4 |
 
-Interpretation: OpenAlex’s African institution coverage is broad and mixed. It includes education institutions, but also many non-school entities. This explains why a medical keyword search can return hospitals, research institutes, NGOs, councils, associations, and companies alongside universities/colleges.
-
 ## 2. Why strict keyword filtering returns a small list
 
-- OpenAlex does not expose a dedicated `medical_school` institution type.
-- Strict retrieval only captures entities whose institution names contain strong signals such as `medical university`, `college of medicine`, `school of medicine`, or `faculty of medicine`.
-- Many faculties/schools may be represented only as part of a parent university record or through author/works affiliation metadata, not as standalone institution records.
-- Broad terms like `medical`, `health`, `nursing`, and `pharmacy` improve recall but introduce many non-school entities.
+- OpenAlex has no dedicated medical_school institution type.
+- Many faculties/schools are embedded inside broader university records rather than standalone institutions.
+- Strict rules require strong terms like medical university, college of medicine, school of medicine, or faculty of medicine.
+- Broad terms like medical/health/nursing increase recall but introduce hospitals, NGOs, research institutes, councils, and associations.
 
 Strategy comparison from this run:
 
@@ -78,10 +76,10 @@ Interpretation: strict keyword filtering returns a smaller but more defensible l
 
 Recommended retrieval strategy:
 
-1. Use `strict_high_confidence_only` for a defensible standalone-institution core list.
-2. Use `balanced_strict_medium_plus` for a practical review list that includes health-sciences/nursing/pharmacy candidates.
-3. Use `broad_discovery_low_plus` only as a discovery layer to inspect what strict retrieval is excluding.
-4. For embedded faculties, combine institution search with works/authors affiliation queries against broader parent universities.
+1. Use strict_high_confidence_only for a defensible core list.
+2. Use balanced_strict_medium_plus for a practical review list.
+3. Use broad_discovery_low_plus as a candidate discovery layer, not as the final list.
+4. For embedded faculties, combine institution search with works/authors affiliation queries against parent universities.
 
 Embedded probe used:
 
@@ -137,9 +135,10 @@ The Authors endpoint provides useful bibliographic author metadata linked to ins
 
 - OpenAlex ID: https://openalex.org/I2802393258
 - Institution type: education
-- Authors matched by `last_known_institutions.id` at time of run: 2,094
+- Authors matched by `last_known_institutions.id` at time of run: 2094
 - Provides: disambiguated author profiles, ORCID when available, works/citations, last known institutions, affiliation history where available, topics, and works API URL.
 - Does not provide: official staff directory, employment verification, guaranteed department/faculty membership, or perfectly complete historical affiliations.
+
 
 ## Bottom line
 
