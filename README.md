@@ -1,6 +1,6 @@
 # OpenAlex Retriever
 
-A Python CLI and FastAPI service for retrieving and classifying medical-school-like institutions in Africa using the official OpenAlex Institutions API.
+A Python CLI, FastAPI service, and reproducible audit toolkit for retrieving and evaluating medical-school-like institutions in Africa using the official OpenAlex API.
 
 This is **API-based data retrieval**, not HTML scraping.
 
@@ -44,6 +44,46 @@ export OPENALEX_API_KEY=your_openalex_api_key
 ```bash
 pytest -q
 ```
+
+## Run the retrieval audit
+
+Peter's requested audit should be run with:
+
+```bash
+python scripts/audit_openalex.py --mailto YOUR_EMAIL@example.com --max-results 200
+```
+
+Or, if `OPENALEX_MAILTO` is already exported:
+
+```bash
+python scripts/audit_openalex.py --max-results 200
+```
+
+The audit writes reproducible evidence into `outputs/`:
+
+```text
+outputs/openalex_retrieval_audit_report.md
+outputs/audit_manifest.json
+outputs/coverage_by_country_type.json
+outputs/coverage_by_country.csv
+outputs/coverage_by_type.csv
+outputs/coverage_country_type_matrix.csv
+outputs/query_strategy_comparison.json
+outputs/strict_high_confidence_only.csv
+outputs/balanced_strict_medium_plus.csv
+outputs/broad_discovery_low_plus.csv
+outputs/embedded_faculty_strategy_audit.json
+outputs/false_positive_negative_audit.json
+outputs/authors_endpoint_sample_audit.json
+```
+
+The audit answers:
+
+1. OpenAlex coverage of African institutions by country and type.
+2. Why strict keyword filtering returns a small medical-school list.
+3. Query strategies for embedded faculties, colleges, and schools inside broader universities.
+4. Main false positives and false negatives.
+5. What the authors endpoint provides for three sample institutions.
 
 ## Run as an API
 
@@ -142,11 +182,11 @@ reason
 
 ## Recommended workflow for Peter's task
 
-1. Start with strict mode to retrieve likely medical schools.
-2. Export CSV for review.
-3. Run broad mode separately to inspect related hospitals/research institutes/councils without mixing them into the school list.
+1. Run `scripts/audit_openalex.py` first to generate the audit report and evidence files.
+2. Use strict/balanced retrieval for a defensible candidate list.
+3. Use broad retrieval and embedded works/authors probes to understand false positives and false negatives.
 4. Manually verify edge cases because OpenAlex does not provide a canonical `medical_school` entity type.
 
 ## Limitations
 
-This project produces a high-quality candidate list, not a guaranteed official directory of every medical school in Africa. Accuracy depends on OpenAlex institution naming, ROR metadata, and search coverage.
+This project produces a reproducible audit and high-quality candidate list, not a guaranteed official directory of every medical school in Africa. Accuracy depends on OpenAlex institution naming, ROR metadata, author affiliation metadata, and search coverage.
